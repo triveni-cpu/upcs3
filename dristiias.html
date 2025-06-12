@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drishti IAS Current Affairs</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h2 { margin-top: 40px; }
+    ul { list-style-type: none; padding: 0; }
+    li { margin-bottom: 10px; }
+    a { text-decoration: none; color: #0066cc; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>Drishti IAS - Current Affairs</h1>
+
+  <h2>📰 English Current Affairs</h2>
+  <ul id="english-news"></ul>
+
+  <h2>📰 Hindi Current Affairs</h2>
+  <ul id="hindi-news"></ul>
+
+  <script>
+    const feeds = {
+      english: "https://www.drishtiias.com/rss.rss",
+      hindi: "https://www.drishtiias.com/hindi/rss.rss"
+    };
+
+    function fetchFeed(rssUrl, containerId) {
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          const container = document.getElementById(containerId);
+          container.innerHTML = '';
+          data.items.slice(0, 10).forEach(item => {
+            const li = document.createElement('li');
+            li.innerHTML = `<a href="${item.link}" target="_blank">${item.title}</a>`;
+            container.appendChild(li);
+          });
+        })
+        .catch(error => {
+          document.getElementById(containerId).innerHTML = `<li>Error loading feed: ${error}</li>`;
+        });
+    }
+
+    fetchFeed(feeds.english, 'english-news');
+    fetchFeed(feeds.hindi, 'hindi-news');
+
+    // Auto-refresh every 10 minutes (optional)
+    setInterval(() => {
+      fetchFeed(feeds.english, 'english-news');
+      fetchFeed(feeds.hindi, 'hindi-news');
+    }, 10 * 60 * 1000);
+  </script>
+</body>
+</html>
