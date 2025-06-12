@@ -2,28 +2,27 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Drishti IAS News (Grouped by Date)</title>
+  <title>Drishti IAS – Today's News (IST)</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f4f4f4; }
     h1 { text-align: center; }
-    h2 { margin-top: 40px; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
-    h3 { margin-top: 20px; color: #333; }
+    h2 { margin-top: 40px; border-bottom: 2px solid #ccc; padding-bottom: 5px; }
     ul { list-style-type: none; padding-left: 0; }
-    li { margin-bottom: 10px; padding: 5px 0; }
-    a { text-decoration: none; color: #0073e6; font-weight: bold; }
+    li { margin-bottom: 10px; }
+    a { text-decoration: none; color: #0077cc; font-weight: bold; }
     a:hover { text-decoration: underline; }
-    .category { font-size: 0.85em; background: #e0e0e0; color: #333; padding: 2px 6px; margin-left: 10px; border-radius: 4px; }
-    .date-section { margin-bottom: 20px; }
+    .category { font-size: 0.8em; background: #eee; padding: 2px 6px; border-radius: 4px; margin-left: 10px; }
+    .empty { color: #888; font-style: italic; }
   </style>
 </head>
 <body>
-  <h1>📰 Drishti IAS - Current Affairs</h1>
+  <h1>📰 Drishti IAS – Today's Current Affairs (IST)</h1>
 
-  <h2>📌 English</h2>
-  <div id="english-news" class="date-section"></div>
+  <h2>English</h2>
+  <ul id="english-news"></ul>
 
-  <h2>📌 Hindi</h2>
-  <div id="hindi-news" class="date-section"></div>
+  <h2>Hindi</h2>
+  <ul id="hindi-news"></ul>
 
   <script>
     const feeds = {
@@ -31,66 +30,57 @@
       hindi: "https://www.drishtiias.com/hindi/rss.rss"
     };
 
-    function formatDate(dateString) {
-      const date = new Date(dateString);
-      return date.toLocaleDateString("en-IN", {
-        weekday: "long", year: "numeric", month: "short", day: "numeric"
-      });
+    function getTodayIST() {
+      const now = new Date();
+      // Convert to IST (UTC+5:30)
+      const istOffset = 330; // minutes
+      const istTime = new Date(now.getTime() + (istOffset + now.getTimezoneOffset()) * 60000);
+      return istTime.toISOString().slice(0, 10); // YYYY-MM-DD
     }
 
-    function groupByDate(items) {
-      const grouped = {};
-      items.forEach(item => {
-        const date = formatDate(item.pubDate);
-        if (!grouped[date]) grouped[date] = [];
-        grouped[date].push(item);
-      });
-      return grouped;
-    }
+    function fetchTodayFeed(rssUrl, containerId) {
+      const todayIST = getTodayIST();
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
 
-    function renderFeed(data, containerId) {
-      const container = document.getElementById(containerId);
-      container.innerHTML = '';
-
-      const groupedItems = groupByDate(data.items.slice(0, 20)); // Limit to latest 20 items
-
-      Object.keys(groupedItems).forEach(date => {
-        const dateHeader = document.createElement('h3');
-        dateHeader.textContent = date;
-        container.appendChild(dateHeader);
-
-        const ul = document.createElement('ul');
-        groupedItems[date].forEach(item => {
-          const li = document.createElement('li');
-          let title = `<a href="${item.link}" target="_blank">${item.title}</a>`;
-          let category = item.categories && item.categories.length > 0
-            ? `<span class="category">${item.categories[0]}</span>`
-            : '';
-          li.innerHTML = title + category;
-          ul.appendChild(li);
-        });
-        container.appendChild(ul);
-      });
-    }
-
-    function fetchAndRenderFeed(url, containerId) {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
       fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => renderFeed(data, containerId))
-        .catch(err => {
-          document.getElementById(containerId).innerHTML = `<p>Error: ${err.message}</p>`;
+        .then(res => res.json())
+        .then(data => {
+          const container = document.getElementById(containerId);
+          container.innerHTML = '';
+          const todayItems = data.items.filter(item => {
+            const pubDate = new Date(item.pubDate);
+            const istOffset = 330;
+            const istDate = new Date(pubDate.getTime() + istOffset * 60000)
+              .toISOString().slice(0, 10);
+            return istDate === todayIST;
+          });
+
+          if (todayItems.length === 0) {
+            container.innerHTML = '<li class="empty">No updates yet for today.</li>';
+            return;
+          }
+
+          todayItems.forEach(item => {
+            const li = document.createElement('li');
+            const category = item.categories && item.categories.length > 0
+              ? `<span class="category">${item.categories[0]}</span>` : '';
+            li.innerHTML = `<a href="${item.link}" target="_blank">${item.title}</a> ${category}`;
+            container.appendChild(li);
+          });
+        })
+        .catch(error => {
+          document.getElementById(containerId).innerHTML = `<li class="empty">Error: ${error.message}</li>`;
         });
     }
 
-    // Initial Load
-    fetchAndRenderFeed(feeds.english, "english-news");
-    fetchAndRenderFeed(feeds.hindi, "hindi-news");
+    // Load today's news
+    fetchTodayFeed(feeds.english, 'english-news');
+    fetchTodayFeed(feeds.hindi, 'hindi-news');
 
-    // Auto refresh every 10 minutes
+    // Refresh every 10 minutes
     setInterval(() => {
-      fetchAndRenderFeed(feeds.english, "english-news");
-      fetchAndRenderFeed(feeds.hindi, "hindi-news");
+      fetchTodayFeed(feeds.english, 'english-news');
+      fetchTodayFeed(feeds.hindi, 'hindi-news');
     }, 10 * 60 * 1000);
   </script>
 </body>
