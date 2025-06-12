@@ -2,24 +2,28 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Drishti IAS Current Affairs</title>
+  <title>Drishti IAS News (Grouped by Date)</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    h2 { margin-top: 40px; }
-    ul { list-style-type: none; padding: 0; }
-    li { margin-bottom: 10px; }
-    a { text-decoration: none; color: #0066cc; }
+    body { font-family: Arial, sans-serif; padding: 20px; background: #f9f9f9; }
+    h1 { text-align: center; }
+    h2 { margin-top: 40px; border-bottom: 2px solid #ddd; padding-bottom: 5px; }
+    h3 { margin-top: 20px; color: #333; }
+    ul { list-style-type: none; padding-left: 0; }
+    li { margin-bottom: 10px; padding: 5px 0; }
+    a { text-decoration: none; color: #0073e6; font-weight: bold; }
     a:hover { text-decoration: underline; }
+    .category { font-size: 0.85em; background: #e0e0e0; color: #333; padding: 2px 6px; margin-left: 10px; border-radius: 4px; }
+    .date-section { margin-bottom: 20px; }
   </style>
 </head>
 <body>
-  <h1>Drishti IAS - Current Affairs</h1>
+  <h1>📰 Drishti IAS - Current Affairs</h1>
 
-  <h2>📰 English Current Affairs</h2>
-  <ul id="english-news"></ul>
+  <h2>📌 English</h2>
+  <div id="english-news" class="date-section"></div>
 
-  <h2>📰 Hindi Current Affairs</h2>
-  <ul id="hindi-news"></ul>
+  <h2>📌 Hindi</h2>
+  <div id="hindi-news" class="date-section"></div>
 
   <script>
     const feeds = {
@@ -27,32 +31,66 @@
       hindi: "https://www.drishtiias.com/hindi/rss.rss"
     };
 
-    function fetchFeed(rssUrl, containerId) {
-      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rssUrl)}`;
+    function formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("en-IN", {
+        weekday: "long", year: "numeric", month: "short", day: "numeric"
+      });
+    }
 
+    function groupByDate(items) {
+      const grouped = {};
+      items.forEach(item => {
+        const date = formatDate(item.pubDate);
+        if (!grouped[date]) grouped[date] = [];
+        grouped[date].push(item);
+      });
+      return grouped;
+    }
+
+    function renderFeed(data, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+
+      const groupedItems = groupByDate(data.items.slice(0, 20)); // Limit to latest 20 items
+
+      Object.keys(groupedItems).forEach(date => {
+        const dateHeader = document.createElement('h3');
+        dateHeader.textContent = date;
+        container.appendChild(dateHeader);
+
+        const ul = document.createElement('ul');
+        groupedItems[date].forEach(item => {
+          const li = document.createElement('li');
+          let title = `<a href="${item.link}" target="_blank">${item.title}</a>`;
+          let category = item.categories && item.categories.length > 0
+            ? `<span class="category">${item.categories[0]}</span>`
+            : '';
+          li.innerHTML = title + category;
+          ul.appendChild(li);
+        });
+        container.appendChild(ul);
+      });
+    }
+
+    function fetchAndRenderFeed(url, containerId) {
+      const apiUrl = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(url)}`;
       fetch(apiUrl)
         .then(response => response.json())
-        .then(data => {
-          const container = document.getElementById(containerId);
-          container.innerHTML = '';
-          data.items.slice(0, 10).forEach(item => {
-            const li = document.createElement('li');
-            li.innerHTML = `<a href="${item.link}" target="_blank">${item.title}</a>`;
-            container.appendChild(li);
-          });
-        })
-        .catch(error => {
-          document.getElementById(containerId).innerHTML = `<li>Error loading feed: ${error}</li>`;
+        .then(data => renderFeed(data, containerId))
+        .catch(err => {
+          document.getElementById(containerId).innerHTML = `<p>Error: ${err.message}</p>`;
         });
     }
 
-    fetchFeed(feeds.english, 'english-news');
-    fetchFeed(feeds.hindi, 'hindi-news');
+    // Initial Load
+    fetchAndRenderFeed(feeds.english, "english-news");
+    fetchAndRenderFeed(feeds.hindi, "hindi-news");
 
-    // Auto-refresh every 10 minutes (optional)
+    // Auto refresh every 10 minutes
     setInterval(() => {
-      fetchFeed(feeds.english, 'english-news');
-      fetchFeed(feeds.hindi, 'hindi-news');
+      fetchAndRenderFeed(feeds.english, "english-news");
+      fetchAndRenderFeed(feeds.hindi, "hindi-news");
     }, 10 * 60 * 1000);
   </script>
 </body>
